@@ -3,29 +3,60 @@ import numpy as np
 import onnxruntime as rt
 from pathlib import Path
 import json
-import sys
+
+from pydub import AudioSegment
+import io
 
 # --- Utility functions ---
 
 
 def read_wav(filename: str):
-    with wave.open(filename, mode="rb") as f:
-        data = f.readframes(f.getnframes())
-        zero_value = 0
-        if f.getsampwidth() == 1:
-            buffer = np.frombuffer(data, dtype="u1")
-            zero_value = 1
-        elif f.getsampwidth() == 3:
-            buffer = np.zeros((len(data) // 3, 4), dtype="V1")
-            buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
-            buffer = buffer.view(dtype="<i4")
-        else:
-            buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
-        max_value = 2 ** (8 * buffer.itemsize - 1)
-        arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
-        if arr.shape[1] != 1:
-            raise ValueError("Only mono audio supported")
-        return arr[:, 0], f.getframerate()
+    # If input is not WAV, convert via pydub
+    if not filename.lower().endswith(".wav"):
+        audio = AudioSegment.from_file(filename)
+        in_memory_wav_buffer = io.BytesIO()
+        audio.export(in_memory_wav_buffer, format="wav")
+        in_memory_wav_buffer.seek(0)
+
+        try:
+            with wave.open(in_memory_wav_buffer, mode="rb") as f:
+                data = f.readframes(f.getnframes())
+                zero_value = 0
+                if f.getsampwidth() == 1:
+                    buffer = np.frombuffer(data, dtype="u1")
+                    zero_value = 1
+                elif f.getsampwidth() == 3:
+                    buffer = np.zeros((len(data) // 3, 4), dtype="V1")
+                    buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
+                    buffer = buffer.view(dtype="<i4")
+                else:
+                    buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
+                max_value = 2 ** (8 * buffer.itemsize - 1)
+                arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
+                if arr.shape[1] != 1:
+                    raise ValueError("Only mono audio supported")
+                return arr[:, 0], f.getframerate()
+        except Exception as e:
+            print(f"Error processing in-memory audio: {e}")
+            raise
+    else:
+        with wave.open(filename, mode="rb") as f:
+            data = f.readframes(f.getnframes())
+            zero_value = 0
+            if f.getsampwidth() == 1:
+                buffer = np.frombuffer(data, dtype="u1")
+                zero_value = 1
+            elif f.getsampwidth() == 3:
+                buffer = np.zeros((len(data) // 3, 4), dtype="V1")
+                buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
+                buffer = buffer.view(dtype="<i4")
+            else:
+                buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
+            max_value = 2 ** (8 * buffer.itemsize - 1)
+            arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
+            if arr.shape[1] != 1:
+                raise ValueError("Only mono audio supported")
+            return arr[:, 0], f.getframerate()
 
 
 def pad_list(arrays):
