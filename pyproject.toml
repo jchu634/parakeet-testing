@@ -3,9 +3,16 @@ name = "parakeet-testing"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
+    "onnxruntime>=1.22.0",
     "cuda-python>=13.0.0; sys_platform == 'linux'",
     "nemo-toolkit[asr]>=2.4.0; sys_platform == 'linux'",
+    "torch>=2.8.0; sys_platform == 'linux'",
+    "torchaudio>=2.8.0; sys_platform == 'linux'",
+    "torchvision>=0.23.0; sys_platform == 'linux'",
+    "cmake<4.0; sys_platform == 'linux'",
+    "cmake>=3.31.6",
+    "amd-quark>=0.9",
     "pydub>=0.25.1",
 ]
