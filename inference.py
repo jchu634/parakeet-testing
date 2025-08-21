@@ -10,53 +10,32 @@ import io
 # --- Utility functions ---
 
 
-def read_wav(filename: str):
+def read_file(filename: str):
+    fileObject = filename
     # If input is not WAV, convert via pydub
     if not filename.lower().endswith(".wav"):
         audio = AudioSegment.from_file(filename)
-        in_memory_wav_buffer = io.BytesIO()
-        audio.export(in_memory_wav_buffer, format="wav")
-        in_memory_wav_buffer.seek(0)
+        fileObject = io.BytesIO()
+        audio.export(fileObject, format="wav")
+        fileObject.seek(0)
 
-        try:
-            with wave.open(in_memory_wav_buffer, mode="rb") as f:
-                data = f.readframes(f.getnframes())
-                zero_value = 0
-                if f.getsampwidth() == 1:
-                    buffer = np.frombuffer(data, dtype="u1")
-                    zero_value = 1
-                elif f.getsampwidth() == 3:
-                    buffer = np.zeros((len(data) // 3, 4), dtype="V1")
-                    buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
-                    buffer = buffer.view(dtype="<i4")
-                else:
-                    buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
-                max_value = 2 ** (8 * buffer.itemsize - 1)
-                arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
-                if arr.shape[1] != 1:
-                    raise ValueError("Only mono audio supported")
-                return arr[:, 0], f.getframerate()
-        except Exception as e:
-            print(f"Error processing in-memory audio: {e}")
-            raise
-    else:
-        with wave.open(filename, mode="rb") as f:
-            data = f.readframes(f.getnframes())
-            zero_value = 0
-            if f.getsampwidth() == 1:
-                buffer = np.frombuffer(data, dtype="u1")
-                zero_value = 1
-            elif f.getsampwidth() == 3:
-                buffer = np.zeros((len(data) // 3, 4), dtype="V1")
-                buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
-                buffer = buffer.view(dtype="<i4")
-            else:
-                buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
-            max_value = 2 ** (8 * buffer.itemsize - 1)
-            arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
-            if arr.shape[1] != 1:
-                raise ValueError("Only mono audio supported")
-            return arr[:, 0], f.getframerate()
+    with wave.open(fileObject, mode="rb") as f:
+        data = f.readframes(f.getnframes())
+        zero_value = 0
+        if f.getsampwidth() == 1:
+            buffer = np.frombuffer(data, dtype="u1")
+            zero_value = 1
+        elif f.getsampwidth() == 3:
+            buffer = np.zeros((len(data) // 3, 4), dtype="V1")
+            buffer[:, -3:] = np.frombuffer(data, dtype="V1").reshape(-1, f.getsampwidth())
+            buffer = buffer.view(dtype="<i4")
+        else:
+            buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
+        max_value = 2 ** (8 * buffer.itemsize - 1)
+        arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
+        if arr.shape[1] != 1:
+            raise ValueError("Only mono audio supported")
+        return arr[:, 0], f.getframerate()
 
 
 def pad_list(arrays):
@@ -174,10 +153,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parakeet v3 ONNX ASR inference (single folder)")
     parser.add_argument(
         "folder", help="Path to folder with model files (encoder-model.onnx, decoder_joint-model.onnx, vocab.txt, config.json, nemo*.onnx)")
-    parser.add_argument("wav", help="Path to mono wav file (16kHz)")
+    parser.add_argument("file", help="Path to mono input file (16kHz)")
     args = parser.parse_args()
     onnx_options = {"providers": rt.get_available_providers()}
-    waveform, sample_rate = read_wav(args.wav)
+    waveform, sample_rate = read_file(args.file)
     if sample_rate != 16000:
         raise ValueError("Only 16kHz sample rate supported for this model")
     model = NemoConformerTdt(args.folder, onnx_options)
