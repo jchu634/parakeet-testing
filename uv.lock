@@ -2196,6 +2196,7 @@ dependencies = [
     { name = "torch", marker = "sys_platform == 'linux'" },
     { name = "torchaudio", marker = "sys_platform == 'linux'" },
     { name = "torchvision", marker = "sys_platform == 'linux'" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -2210,6 +2211,7 @@ requires-dist = [
     { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.8.0" },
     { name = "torchaudio", marker = "sys_platform == 'linux'", specifier = ">=2.8.0" },
     { name = "torchvision", marker = "sys_platform == 'linux'", specifier = ">=0.23.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [[package]]

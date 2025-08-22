@@ -15,4 +15,5 @@ dependencies = [
     "cmake>=3.31.6",
     "amd-quark>=0.9",
     "pydub>=0.25.1",
+    "tqdm>=4.67.1",
 ]

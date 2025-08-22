@@ -83,4 +83,8 @@ def exportParakeetAsOnnxOptimised(model, onnx_dir):
 
 if __name__ == "__main__":
     model = nemo_asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v3')
-    exportParakeetAsOnnxOptimised(model, Path('nemo-onnx-alt'))
+    exportParakeetAsOnnxOptimised(model, Path('nemo-onnx'))
+    for i in ["encoder-model.onnx", "decoder_joint-model.onnx"]:
+        model = onnx.load(Path('nemo-onnx') / i, load_external_data=False)
+        model.ir_version = 9
+        model = onnx.save(model, Path('nemo-onnx-8') / i)
