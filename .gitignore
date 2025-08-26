@@ -11,4 +11,6 @@ wheels/
 
 # Data Folders
 nemo-onnx
+nemo-onnx-8
 testing-data
+testing-data-limited

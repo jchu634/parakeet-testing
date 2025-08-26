@@ -1,5 +1,4 @@
 import json
-from onnx.external_data_helper import convert_model_to_external_data
 import onnx
 import shutil
 import nemo.collections.asr as nemo_asr
@@ -19,6 +18,12 @@ def exportParakeetAsOnnxReference(model, onnx_dir):
         for i, token in enumerate([*model.tokenizer.vocab, "<blk>"]):
             f.write(f"{token} {i}\n")
 
+    # Attempt at fixing ir_version not set (Didn't work)
+    for i in ["encoder-model.onnx", "decoder_joint-model.onnx"]:
+        model = onnx.load(Path('nemo-onnx') / i, load_external_data=False)
+        model.ir_version = 8  # Model export default ir_version is 8
+        model = onnx.save(model, Path(f'nemo-onnx-8') / i)
+
 
 def exportParakeetAsOnnxOptimised(model, onnx_dir):
     enable_local_attn = True
@@ -35,19 +40,13 @@ def exportParakeetAsOnnxOptimised(model, onnx_dir):
     onnx_temp_dir = onnx_dir / 'temp'
     onnx_temp_dir.mkdir(parents=True, exist_ok=True)
 
-    model.export(str(Path(onnx_temp_dir, 'model.onnx')))
+    # Relies on torch.export, which supports opset v20 unless dynamo enabled
+    # model.export(str(Path(onnx_temp_dir, 'model.onnx')), onnx_opset_version=21, use_dynamo=True)
+    model.export(str(Path(onnx_temp_dir, 'model.onnx')), onnx_opset_version=17)  # Default opset is 17
 
     encoder_onnx_file = onnx_temp_dir / 'encoder-model.onnx'
     data_file = encoder_onnx_file.name + '.data'
     onnx_model = onnx.load(encoder_onnx_file)
-
-    convert_model_to_external_data(
-        onnx_model,
-        all_tensors_to_one_file=True,
-        location=data_file,
-        size_threshold=0,
-        convert_attribute=False
-    )
 
     onnx.save_model(
         onnx_model,
@@ -83,8 +82,5 @@ def exportParakeetAsOnnxOptimised(model, onnx_dir):
 
 if __name__ == "__main__":
     model = nemo_asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v3')
-    exportParakeetAsOnnxOptimised(model, Path('nemo-onnx'))
-    for i in ["encoder-model.onnx", "decoder_joint-model.onnx"]:
-        model = onnx.load(Path('nemo-onnx') / i, load_external_data=False)
-        model.ir_version = 9
-        model = onnx.save(model, Path('nemo-onnx-8') / i)
+    exportParakeetAsOnnxReference(model, Path('nemo-onnx'))
+    # exportParakeetAsOnnxOptimised(model, Path('nemo-onnx'))
