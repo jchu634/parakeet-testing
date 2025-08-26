@@ -31,6 +31,7 @@ def read_file(filename: str):
             buffer = buffer.view(dtype="<i4")
         else:
             buffer = np.frombuffer(data, dtype=f"<i{f.getsampwidth()}")
+
         max_value = 2 ** (8 * buffer.itemsize - 1)
         arr = buffer.reshape(f.getnframes(), f.getnchannels()).astype(np.float32) / max_value - zero_value
         if arr.shape[1] != 1:
@@ -68,10 +69,12 @@ class NemoConformerTdt:
         decoder_joint_path = folder / "decoder_joint-model.onnx"
         vocab_path = folder / "vocab.txt"
         config_path = folder / "config.json"
+
         # Find preprocessor file (e.g. nemo80.onnx, nemo128.onnx, etc)
         preproc_files = list(folder.glob("nemo*.onnx"))
         if not preproc_files:
             raise FileNotFoundError("No preprocessor ONNX file found in folder")
+
         preprocessor_path = preproc_files[0]
         with open(config_path, "rt", encoding="utf-8") as f:
             self.config = json.load(f)
@@ -82,6 +85,7 @@ class NemoConformerTdt:
         self._preprocessor = Preprocessor(preprocessor_bytes, onnx_options)
         with open(vocab_path, "rt", encoding="utf-8") as f:
             tokens = {token: int(id) for token, id in (line.strip("\n").split(" ") for line in f.readlines())}
+
         self._vocab = {id: token.replace("\u2581", " ") for token, id in tokens.items()}
         self._vocab_size = len(self._vocab)
         self._blank_idx = tokens["<blk>"]
@@ -113,6 +117,7 @@ class NemoConformerTdt:
                 "input_states_2": prev_state[1],
             },
         )
+
         output = np.squeeze(outputs)
         state = (state1, state2)
         return output[: self._vocab_size], int(output[self._vocab_size:].argmax()), state
@@ -122,15 +127,18 @@ class NemoConformerTdt:
         features, features_lens = self._preprocessor(waveforms, waveforms_lens)
         encoder_out, encoder_out_lens = self._encode(features, features_lens)
         results = []
+
         for encodings, encodings_len in zip(encoder_out, encoder_out_lens):
             prev_state = self._create_state()
             tokens = []
             timestamps = []
             t = 0
             emitted_tokens = 0
+
             while t < encodings_len:
                 probs, step, state = self._decode(tokens, prev_state, encodings[t])
                 token = probs.argmax()
+
                 if token != self._blank_idx:
                     prev_state = state
                     tokens.append(int(token))
@@ -142,6 +150,7 @@ class NemoConformerTdt:
                 elif token == self._blank_idx or emitted_tokens == self._max_tokens_per_step:
                     t += 1
                     emitted_tokens = 0
+
             text = "".join([self._vocab[i] for i in tokens]).replace("  ", " ").strip()
             results.append(text)
         return results[0] if len(results) == 1 else results
@@ -154,11 +163,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "folder", help="Path to folder with model files (encoder-model.onnx, decoder_joint-model.onnx, vocab.txt, config.json, nemo*.onnx)")
     parser.add_argument("file", help="Path to mono input file (16kHz)")
+
     args = parser.parse_args()
     onnx_options = {"providers": rt.get_available_providers()}
+
     waveform, sample_rate = read_file(args.file)
     if sample_rate != 16000:
         raise ValueError("Only 16kHz sample rate supported for this model")
+
     model = NemoConformerTdt(args.folder, onnx_options)
     text = model.recognize(waveform)
     print(text)

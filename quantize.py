@@ -368,7 +368,7 @@ if __name__ == "__main__":
         "--config",
         "-c",
         choices=quant_configs,
-        default="default",
+        default="A8W8",
         help=f"Choose a quantization configuration option: {', '.join(quant_configs)} (default: A8W8)",
     )
 

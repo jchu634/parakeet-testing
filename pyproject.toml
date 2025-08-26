@@ -13,7 +13,7 @@ dependencies = [
     "torchvision>=0.23.0; sys_platform == 'linux'",
     "cmake<4.0; sys_platform == 'linux'",
     "cmake>=3.31.6",
-    "amd-quark>=0.9",
     "pydub>=0.25.1",
     "tqdm>=4.67.1",
+    "amd-quark>=0.9",
 ]

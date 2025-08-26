@@ -82,5 +82,5 @@ def exportParakeetAsOnnxOptimised(model, onnx_dir):
 
 if __name__ == "__main__":
     model = nemo_asr.models.ASRModel.from_pretrained('nvidia/parakeet-tdt-0.6b-v3')
-    exportParakeetAsOnnxReference(model, Path('nemo-onnx'))
-    # exportParakeetAsOnnxOptimised(model, Path('nemo-onnx'))
+    # exportParakeetAsOnnxReference(model, Path('nemo-onnx'))
+    exportParakeetAsOnnxOptimised(model, Path('nemo-onnx'))
